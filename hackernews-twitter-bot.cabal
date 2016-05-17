@@ -1,0 +1,50 @@
+name:                  hackernews-twitter-bot
+version:               1.0.0
+synopsis:              HackerNews Twitter Bot
+description:           Twitter bot posting the current top story to Twitter
+homepage:              https://github.com/sengaya/hackernews-twitter-bot
+license:               GPL-3
+license-file:          LICENSE
+author:                Thilo Uttendorfer
+maintainer:            tlo@sengaya.de
+copyright:             Copyright (C) 2016 Thilo Uttendorfer
+category:              Web
+build-type:            Simple
+cabal-version:         >= 1.10
+
+library
+  hs-source-dirs:      src/lib
+  ghc-options:         -Wall -fno-warn-unused-binds
+  default-language:    Haskell2010
+  build-depends:       base >= 4.6,
+                       hackernews,
+                       text,
+                       bytestring,
+                       aeson,
+                       twitter-conduit
+  exposed-modules:     Web.HnBot
+                       Web.HnBot.Utils
+
+executable hackernews-twitter-bot
+  hs-source-dirs:      src/exec
+  main-is:             Main.hs
+  ghc-options:         -threaded -Wall -fno-warn-unused-binds
+
+  default-language:    Haskell2010
+  build-depends:       base >=4.6,
+                       hackernews-twitter-bot
+
+test-suite tests
+  hs-source-dirs:      src/tests
+  main-is:             test.hs
+  ghc-options:         -Wall -fno-warn-unused-binds
+  default-language:    Haskell2010
+  type:                exitcode-stdio-1.0
+  build-depends:       base,
+                       tasty,
+                       tasty-hunit,
+                       tasty-quickcheck,
+                       text,
+                       time,
+                       hackernews,
+                       hackernews-twitter-bot
