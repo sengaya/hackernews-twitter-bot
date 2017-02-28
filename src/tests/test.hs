@@ -1,12 +1,13 @@
-import Test.Tasty
-import Test.Tasty.QuickCheck as QC
-import Test.Tasty.HUnit
-import Data.Text as T
-import Data.Time (UTCTime(..))
-import Data.Time.Calendar (Day(..))
-import Data.Time.Clock (secondsToDiffTime)
-import Web.HackerNews (Story(..), StoryId(..), TopStories(..))
-import Web.HnBot.Utils (formatTweet, seen, shortTitle)
+import           Data.Text             as T
+import           Test.Tasty
+import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck as QC
+import           Web.HackerNews        (Descendants (..), Item (..),
+                                        ItemId (..), ItemType (..), Kids (..),
+                                        Score (..), Time (..), Title (..),
+                                        TopStories (..), URL (..),
+                                        UserName (..))
+import           Web.HnBot.Utils       (formatTweet, seen, shortTitle)
 
 main :: IO ()
 main = defaultMain tests
@@ -49,29 +50,33 @@ unitTests = testGroup "Unit tests"
         let res = formatTweet $ story lorem155 ""
         assertEqual "Formatted tweet" (T.pack "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dol ... https://news.ycombinator.com/item?id=666") res
     , testCase "check if story id already posted (True)" $
-        assertEqual "seen" True (seen someStoryIds (StoryId 666))
+        assertEqual "seen" True (seen someItemIds (ItemId 666))
     , testCase "check if story id already posted (False)" $
-        assertEqual "seen" False (seen someStoryIds (StoryId 667))
+        assertEqual "seen" False (seen someItemIds (ItemId 667))
     ]
 
 -- 155 random chars
 lorem155 :: String
 lorem155 = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
 
-someStoryIds :: [StoryId]
-someStoryIds = [StoryId 1, StoryId 2, StoryId 666, StoryId 9999]
+someItemIds :: [ItemId]
+someItemIds = [ItemId 1, ItemId 2, ItemId 666, ItemId 9999]
 
 someTopStories :: TopStories
-someTopStories = TopStories [1, 2, 666, 1000]
+someTopStories = TopStories [ItemId 1, ItemId 2, ItemId 666, ItemId 1000]
 
-story :: String -> String -> Story
-story title url = Story { storyBy      = T.pack "storyBy"
-              , storyId      = StoryId 666
-              , storyKids    = Just [77, 99]
-              , storyScore   = 33
-              , storyTime    = UTCTime (ModifiedJulianDay 10) (secondsToDiffTime 10)
-              , storyTitle   = T.pack title
-              , storyType    = T.pack "storyType"
-              , storyUrl     = Just $ T.pack url
-              , storyDeleted = False
-              , storyDead    = False }
+story :: String -> String -> Item
+story title url = Item { itemBy          = Just (UserName $ T.pack "storyBy")
+                       , itemId          = Just (ItemId 666)
+                       , itemKids        = Just (Kids [ItemId 77, ItemId 99])
+                       , itemScore       = Just (Score 33)
+                       , itemTime        = Just (Time 1172394646)
+                       , itemTitle       = Just (Title $ T.pack title)
+                       , itemType        = Story
+                       , itemURL         = Just (URL $ T.pack url)
+                       , itemDeleted     = Nothing
+                       , itemDead        = Nothing
+                       , itemText        = Nothing
+                       , itemParent      = Nothing
+                       , itemParts       = Nothing
+                       , itemDescendants = Just (Descendants 2) }

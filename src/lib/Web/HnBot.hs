@@ -1,30 +1,35 @@
 module Web.HnBot where
 
-import Data.Aeson (FromJSON(..))
-import Control.Monad (unless)
-import Control.Concurrent (threadDelay)
-import System.Environment (getEnv)
-import System.Exit (exitFailure)
-import Web.HnBot.Utils (formatTweet, seen, getSeenStories, writeSeenStory)
-import Web.HackerNews (getStory, getTopStories, hackerNews, HackerNews,
-                       StoryId(..), TopStories(..))
-import Web.Twitter.Conduit (call, def, newManager, setCredential,
-                            tlsManagerSettings, twitterOAuth, update,
-                            Credential(..), OAuth(..), TWInfo(..))
-import qualified Data.ByteString.Char8 as S8
+import           Control.Concurrent      (threadDelay)
+import           Control.Monad           (unless)
+import           Data.Aeson              (FromJSON (..))
+import qualified Data.ByteString.Char8   as S8
+import           Network.HTTP.Client     (newManager)
+import           Network.HTTP.Client.TLS (tlsManagerSettings)
+import           System.Environment      (getEnv)
+import           System.Exit             (exitFailure)
+import           Web.HackerNews          (HackerNewsError, ItemId (..),
+                                          TopStories (..), getItem,
+                                          getTopStories)
+import           Web.HnBot.Utils         (formatTweet, getSeenStories, seen,
+                                          writeSeenStory)
+import           Web.Twitter.Conduit     (Credential (..), OAuth (..),
+                                          TWInfo (..), call, def, setCredential,
+                                          twitterOAuth, update)
 
 run :: IO ()
 run = do
-    top_stories <- retry 10 5000000 getTopStories
+    mgr <- newManager tlsManagerSettings
+    top_stories <- retry 10 5000000 $ getTopStories mgr
     let TopStories (s:_) = top_stories
-    let story = StoryId s
+    let story = s
     seen_stories <- getSeenStories
     unless (seen seen_stories story) $
         tweet story
 
-retry :: FromJSON a => Int -> Int -> HackerNews a -> IO a
+retry :: FromJSON a => Int -> Int -> IO (Either HackerNewsError a) -> IO a
 retry retries delay action = do
-    request <- hackerNews action
+    request <- action
     case request of
         Left err -> if retries == 0
                     then print err >> exitFailure
@@ -35,11 +40,12 @@ retry retries delay action = do
                         retry (retries-1) delay action
         Right res -> return res
 
-tweet :: StoryId -> IO ()
+tweet :: ItemId -> IO ()
 tweet story_id = do
-    story <- retry 10 5000000 (getStory story_id)
-    twInfo <- getTWInfoFromEnv
     mgr <- newManager tlsManagerSettings
+    story <- retry 10 5000000 (getItem mgr story_id)
+    twInfo <- getTWInfoFromEnv
+--    mgr <- newManager tlsManagerSettings
     _ <- call twInfo mgr $ update $ formatTweet story
     writeSeenStory story_id
 
