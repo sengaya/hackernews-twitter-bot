@@ -23,7 +23,7 @@ library
                        text,
                        bytestring,
                        aeson,
-                       twitter-conduit >= 0.2.2.1
+                       twitter-conduit >= 0.2.2
   exposed-modules:     Web.HnBot
                        Web.HnBot.Utils
 
