@@ -1,21 +1,27 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Web.HnBot where
 
-import           Control.Concurrent      (threadDelay)
-import           Control.Monad           (unless)
-import           Data.Aeson              (FromJSON (..))
-import qualified Data.ByteString.Char8   as S8
-import           Network.HTTP.Client     (newManager)
-import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import           System.Environment      (getEnv)
-import           System.Exit             (exitFailure)
-import           Web.HackerNews          (HackerNewsError, ItemId (..),
-                                          TopStories (..), getItem,
-                                          getTopStories)
-import           Web.HnBot.Utils         (formatTweet, getSeenStories, seen,
-                                          writeSeenStory)
-import           Web.Twitter.Conduit     (Credential (..), OAuth (..),
-                                          TWInfo (..), call, def, setCredential,
-                                          twitterOAuth, update)
+import           Control.Concurrent           (threadDelay)
+import           Control.Exception            (try)
+import           Control.Monad                (unless)
+import           Data.Aeson                   (FromJSON (..))
+import qualified Data.ByteString.Char8        as S8
+import           Network.HTTP.Client          (newManager)
+import           Network.HTTP.Client.TLS      (tlsManagerSettings)
+import           System.Environment           (getEnv)
+import           System.Exit                  (exitFailure)
+import           Web.HackerNews               (HackerNewsError, ItemId (..),
+                                               TopStories (..), getItem,
+                                               getTopStories)
+import           Web.HnBot.Utils              (formatTweet, getSeenStories,
+                                               seen, writeSeenStory)
+import           Web.Twitter.Conduit          (Credential (..), OAuth (..),
+                                               TWInfo (..), call, def,
+                                               setCredential, twitterOAuth,
+                                               update)
+import           Web.Twitter.Conduit.Response (TwitterError)
+
 
 run :: IO ()
 run = do
@@ -45,9 +51,11 @@ tweet story_id = do
     mgr <- newManager tlsManagerSettings
     story <- retry 10 5000000 (getItem mgr story_id)
     twInfo <- getTWInfoFromEnv
---    mgr <- newManager tlsManagerSettings
-    _ <- call twInfo mgr $ update $ formatTweet story
-    writeSeenStory story_id
+    result <- try (call twInfo mgr $ update $ formatTweet story)
+    case result of
+        Left (err :: TwitterError) -> do print err
+                                         print $ formatTweet story
+        Right _                    -> writeSeenStory story_id
 
 getOAuthTokens :: IO (OAuth, Credential)
 getOAuthTokens = do
